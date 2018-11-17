@@ -1,5 +1,7 @@
 import argparse
 import logging
+from time import sleep
+import sys
 
 from tenmactl import TenmaSupply
 
@@ -21,11 +23,19 @@ def main(port):
 
     print('Enabling...')
     supply.enabled = True
-    print('Actual voltage: {} V'.format(supply.actual_voltage))
-    print('Actual current: {} A'.format(supply.actual_current))
-    print('Mode: {}'.format(supply.mode))
 
-    input('Pres ENTER to disable the power supply and terminate')
+    print('Press Ctrl+C to terminate')
+    while True:
+        try:
+            sys.stdout.write('\033[K')
+            print('Actual voltage/current/mode: {} V, {} A, {}'.format(
+                  supply.actual_voltage, supply.actual_current, supply.mode))
+            sys.stdout.write('\033[F')
+            sleep(0.5)
+        except KeyboardInterrupt:
+            break
+
+    print('Disabling...')
     supply.enabled = False
 
 
