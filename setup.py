@@ -15,7 +15,7 @@ with open(desc_path) as desc_file:
 setup(
     name='tenmactl',
     version=version,
-    url='https://bitbucket.org/teslabs/tenmactl',
+    url='https://github.com/gmarull/tenmactl',
     author='Gerard Marull-Paretas',
     author_email='gerard@teslabs.com',
     packages=['tenmactl'],
