@@ -178,3 +178,118 @@ class TenmaSupply(object):
             number (int): Memory slot.
         """
         self._request('SAV{}'.format(number))
+
+
+class TenmaLoad(object):
+    """Driver for the Tenma 72-13200 DC Electronic Load.
+
+    Args:
+        device (str): Serial port (e.g. /dev/ttyACM0)
+    """
+
+    _BAUDRATE = 115200
+    """int: Baudrate."""
+
+    _RETRIES = 2
+    """int: Response retries."""
+
+    _T_RESP = 0.1
+    """float: Response time (s)."""
+
+
+    class MODE(Enum):
+        """Mode."""
+        CC = 1
+        CV = 0
+
+    def __init__(self, port, baudrate=None):
+        if baudrate == None:
+            baudrate = self._BAUDRATE
+        self._dev = Serial(port, baudrate=baudrate)
+
+
+    def _request(self, command, raw=False):
+        """Perform a request to the device.
+
+        Args:
+            command (str): Command.
+            raw (bool, optional): Return raw response.
+
+        Returns:
+            str: Reply (if command ends with ``?``).
+        """
+
+        retries = 0
+        while retries < self._RETRIES:
+            _logger.debug('TX: %s', command)
+            line_command = command  + '\r'
+            self._dev.write(line_command.encode('utf-8'))
+
+            sleep(self._T_RESP)
+
+            if not command.endswith('?'):
+                return
+
+            reply = self._dev.read(self._dev.in_waiting)
+            if reply:
+                _logger.debug('RX: %s', reply)
+                if raw:
+                    return reply
+
+                return ''.join(filter(lambda x: x in string.printable,
+                                      reply.decode('utf-8')))
+
+            _logger.warning('Transmission retry')
+
+    @property
+    def identification(self):
+        return self._request('*IDN?')
+
+    @property
+    def current(self):
+        return float(self._request(':CURR?'))
+
+    @current.setter
+    def current(self, current):
+        self._request(':CURR {:.3f}A'.format(current))
+
+    @property
+    def voltage(self):
+        return float(self._request(':VOLT?'))
+
+    @voltage.setter
+    def voltage(self, voltage):
+        self._request(':VOLT {:.2f}V'.format(voltage))
+
+    @property
+    def actual_current(self):
+        # remove last 2 characters, measurement unit and <CR>
+        return float(self._request(':MEAS:CURR?')[:-2])
+
+    @property
+    def actual_voltage(self):
+        return float(self._request(':MEAS:VOLT?')[:-2])
+
+    @property
+    def actual_power(self):
+        return float(self._request(':MEAS:POW?')[:-2])
+
+    @property
+    def enabled(self):
+        state = self._request(':INP?').strip()
+        return state!='OFF'
+
+    @enabled.setter
+    def enabled(self, enabled):
+        self._request(':INP ' + ('ON' if enabled else 'OFF'))
+
+    @property
+    def mode(self):
+        mode = self._request(':FUNC?').strip()
+        return mode
+
+    @mode.setter
+    def mode(self, str_mode):
+        self._request(':FUNC '+ str_mode)
+
+
